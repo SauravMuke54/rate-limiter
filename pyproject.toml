@@ -1,0 +1,17 @@
+[project]
+name = "rate-limiter"
+version = "0.1.0"
+description = "A python based rate limiter to limit request and avoid server from overhead of requests"
+authors = [
+    {name = "Saurav Muke"}
+]
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi[standard] (>=0.128.0,<0.129.0)",
+    "redis (>=7.1.0,<8.0.0)",
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
