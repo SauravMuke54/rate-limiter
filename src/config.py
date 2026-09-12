@@ -1,7 +1,8 @@
 # config.py
+from settings import settings
 
 ROUTE_CONFIG = {
-    "localhost":{
+    "localhost": {
         "/": {
             "upstream": "http://local-service:8000",
             "limit": 50,
@@ -35,7 +36,7 @@ ROUTE_CONFIG = {
 }
 
 DEFAULT_CONFIG = {
-    "upstream": "http://www.google.com",
-    "limit": 2,
-    "window": 60
+    "upstream": settings.default_upstream,
+    "limit": settings.default_limit,
+    "window": settings.default_window
 }

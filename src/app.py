@@ -1,21 +1,31 @@
-from fastapi import FastAPI, Request, status
-from rate_limit_middleware import RateLimitMiddleware
+# main.py
 from contextlib import asynccontextmanager
-from redis import asyncio as aioredis
+
+import httpx
+import state
+from config import DEFAULT_CONFIG
+from fastapi import FastAPI, Request, status
 from forward_request import forward_request
-import globvar as gv
-# Declare a global Redis client variable
-redis_client : aioredis.Redis = None
+from rate_limit_middleware import RateLimitMiddleware
+from redis import asyncio as aioredis
+from settings import settings
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global redis_client
-    redis_client = aioredis.from_url("redis://localhost", encoding="utf-8", decode_responses=True)
-    print("Connected to Redis", await redis_client.ping())
+    state.redis_client = aioredis.from_url(
+        settings.redis_url, encoding="utf-8", decode_responses=True
+    )
+    print("Connected to Redis", await state.redis_client.ping())
+
+    state.http_client = httpx.AsyncClient(timeout=settings.http_timeout)
+
     try:
         yield
     finally:
-        await redis_client.close()
+        await state.redis_client.close()
+        await state.http_client.aclose()
+
 
 app = FastAPI(
     title="Rate Limiting API",
@@ -29,12 +39,14 @@ app = FastAPI(
 
 app.add_middleware(RateLimitMiddleware)
 
+
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["Health"])
 async def health_check():
     return {"status": "ok"}
 
-@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
-async def proxy(path: str,request:Request):
-    response = await forward_request(gv.upstream, request)
-    return response
 
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def proxy(path: str, request: Request):
+    upstream = getattr(request.state, "upstream", None) or DEFAULT_CONFIG["upstream"]
+    response = await forward_request(upstream, request)
+    return response
