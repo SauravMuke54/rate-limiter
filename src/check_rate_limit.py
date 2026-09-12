@@ -1,5 +1,9 @@
+# check_rate_limit.py
 import time
 import state
+from logging_config import get_logger
+
+logger = get_logger(__name__)
 
 with open("script.lua", "r") as file:
     SCRIPT = file.read()
@@ -27,11 +31,11 @@ async def check_rate_limit(key: str, limit: int, window: int):
         current = int(current)
         ttl_ms = int(ttl_ms)
     except Exception as exc:
-        print(f"[check_rate_limit] Redis error, failing open: {exc}")
+        logger.error("Rate limiter failed, failing open for key=%s: %s", key, exc, exc_info=True)
         return True, limit, window
 
     allowed = current <= limit
     remaining = max(0, limit - current)
-    ttl_seconds = max(0, ttl_ms // 1000)  # convert ms -> s for headers
+    ttl_seconds = max(0, ttl_ms // 1000)
 
     return allowed, remaining, ttl_seconds

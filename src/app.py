@@ -6,9 +6,13 @@ import state
 from config import DEFAULT_CONFIG
 from fastapi import FastAPI, Request, status
 from forward_request import forward_request
+from logging_config import get_logger, setup_logging
 from rate_limit_middleware import RateLimitMiddleware
 from redis import asyncio as aioredis
 from settings import settings
+
+setup_logging(settings.log_level)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -16,7 +20,7 @@ async def lifespan(app: FastAPI):
     state.redis_client = aioredis.from_url(
         settings.redis_url, encoding="utf-8", decode_responses=True
     )
-    print("Connected to Redis", await state.redis_client.ping())
+    logger.info("Connected to Redis: %s", await state.redis_client.ping())
 
     state.http_client = httpx.AsyncClient(timeout=settings.http_timeout)
 
@@ -25,6 +29,7 @@ async def lifespan(app: FastAPI):
     finally:
         await state.redis_client.close()
         await state.http_client.aclose()
+        logger.info("Shutdown complete: Redis and HTTP clients closed")
 
 
 app = FastAPI(

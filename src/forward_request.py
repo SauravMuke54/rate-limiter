@@ -1,17 +1,18 @@
 # forward_request.py
 import httpx
 from fastapi import Request, Response
+from logging_config import get_logger
 import state
 
-# Headers that must not be blindly forwarded from the upstream response,
-# since Response() recomputes/derives these itself.
+logger = get_logger(__name__)
+
 EXCLUDED_RESPONSE_HEADERS = {"content-encoding", "content-length", "transfer-encoding", "connection"}
 
 
 async def forward_request(upstream: str, request: Request) -> Response:
     url = f"{upstream}{request.url.path}"
     headers = dict(request.headers)
-    headers.pop("host", None)  # avoid sending the proxy's own host header upstream
+    headers.pop("host", None)
 
     try:
         response = await state.http_client.request(
@@ -22,10 +23,13 @@ async def forward_request(upstream: str, request: Request) -> Response:
             params=request.query_params,
         )
     except httpx.TimeoutException:
+        logger.error("Upstream timeout: %s %s", request.method, url)
         return Response(content=b"Upstream request timed out", status_code=504)
     except httpx.ConnectError:
+        logger.error("Upstream connection failed: %s %s", request.method, url)
         return Response(content=b"Could not connect to upstream", status_code=502)
     except httpx.HTTPError as exc:
+        logger.error("Upstream request failed: %s %s - %s", request.method, url, exc, exc_info=True)
         return Response(content=f"Upstream request failed: {exc}".encode(), status_code=502)
 
     response_headers = {

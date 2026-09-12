@@ -1,13 +1,12 @@
 # rate_limit_middleware.py
-"""
-A middleware component for rate limiting API requests based on the
-requested host (from the Host header) and path.
-"""
 from check_rate_limit import check_rate_limit
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from logging_config import get_logger
 from resolve_route import resolve_route
 from starlette.middleware.base import BaseHTTPMiddleware
+
+logger = get_logger(__name__)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -20,21 +19,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if path in self.EXEMPT_PATHS:
             return await call_next(request)
 
-        # Use the Host header (the target host the client asked for),
-        # not request.client.host (which is the client's IP address).
         hostname = request.headers.get("host", "").split(":")[0] or request.client.host
-        print(f"Request from {request.client.host} to {hostname}{path}")
+        client_ip = request.client.host
+        logger.debug("Incoming request from %s to %s%s", client_ip, hostname, path)
 
         try:
             route_cfg = resolve_route(hostname, path)
         except Exception as exc:
-            print(f"Failed to resolve route for {hostname}{path}: {exc}")
+            logger.error("Failed to resolve route for %s%s: %s", hostname, path, exc, exc_info=True)
             return JSONResponse(
                 status_code=502,
                 content={"error": "Unable to resolve upstream route"},
             )
 
         if not route_cfg:
+            logger.warning("No route config found for %s%s", hostname, path)
             return JSONResponse(
                 status_code=404,
                 content={"error": "No route configured for this host/path"},
@@ -44,10 +43,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         limit = route_cfg["limit"]
         window = route_cfg["window"]
 
-        # Make the resolved upstream available to the route handler.
         request.state.upstream = upstream
 
-        key = f"rate_limit:{hostname}:{path}:{request.client.host}"
+        key = f"rate_limit:{hostname}:{path}:{client_ip}"
 
         allowed, remaining, ttl = await check_rate_limit(
             key=key,
@@ -56,6 +54,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
 
         if not allowed:
+            logger.warning(
+                "Rate limit exceeded: host=%s path=%s ip=%s limit=%s window=%s",
+                hostname, path, client_ip, limit, window
+            )
             return JSONResponse(
                 status_code=429,
                 content={
