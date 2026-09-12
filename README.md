@@ -1,71 +1,161 @@
 # Rate Limiter
 
-## Overview
-A simple yet production-ready Rate Limiter built with FastAPI, Redis, and Lua scripting.
-It acts as a reverse proxy and protects backend services from being overwhelmed by excessive traffic.
+A production-oriented rate-limiting reverse proxy built with FastAPI, Redis, and Lua scripting. It sits in front of your backend services, enforces per-host/per-route/per-client request limits atomically in Redis, and forwards allowed traffic upstream.
 
-## ✨ Features
-- ⚡ High-performance rate limiting using Redis
-- 🔒 Atomic operations with Redis Lua scripts
-- 🔁 Reverse proxy to forward requests to backend services
-- 🧠 IP + route based limiting
-- ⏱️ TTL-based windowing
-- 📊 Rate limit headers for observability
-- 🚀 Fully async (FastAPI + httpx + redis-async)
+## Features
 
-## 🧩 How it works 
-1. Incoming request hits the Rate Limiter Proxy
-2. Middleware:
-    - Identifies client (IP + route)
-    - Executes Redis Lua script atomically
-3. If limit exceeded:
-    - Responds with 429 Too Many Requests
-4. If allowed:
-    - Request is forwarded to the backend service
-5. Response is returned with rate-limit headers
+- Sliding-window rate limiting via a Redis Lua script (atomic, no race conditions, no boundary-burst issue of naive fixed windows)
+- Per-host, per-path routing configuration with longest-prefix matching
+- Reverse proxy forwarding to configurable upstream services
+- Fails open on Redis errors — a Redis outage doesn't take down the whole API
+- `X-RateLimit-*` response headers for observability
+- Fully async (FastAPI + httpx + redis.asyncio)
+- Test suite (pytest) and CI (GitHub Actions: ruff format, ruff check, pytest)
 
-## 🏗️ Architecture
+## How it works
 
-``` Client
+1. A request hits the proxy.
+2. `RateLimitMiddleware` resolves the target host + path to a route config (upstream, limit, window).
+3. It runs a Redis Lua script atomically: evicts expired entries from a sliding window, counts requests in the current window, and either records this request or rejects it.
+4. If the limit is exceeded → `429 Too Many Requests` with a `Retry-After` header.
+5. Otherwise → the request is forwarded to the resolved upstream via `httpx`, and the response is returned with rate-limit headers attached.
+
+## Architecture
+
+```
+Client
   │
   ▼
-Rate Limiter (FastAPI)
+Rate Limiter (FastAPI + Middleware)
   │
-  ├── Redis (Lua Script)
+  ├── resolve_route()  →  per-host/path config (upstream, limit, window)
+  ├── Redis (sliding-window Lua script)  →  allow / reject
   │
-  └── Backend Service
+  └── forward_request()  →  Backend Service (via httpx)
 ```
 
-## 🚀 Getting Started
+## Project layout
 
-### 1️⃣ Install dependencies
+```
+rate_limiter/
+├── pyproject.toml
+├── .github/workflows/ci.yml
+├── src/
+│   ├── app.py                   # FastAPI app + proxy route
+│   ├── settings.py              # env-driven config
+│   ├── config.py                # ROUTE_CONFIG / DEFAULT_CONFIG
+│   ├── state.py                 # shared Redis + httpx clients
+│   ├── resolve_route.py         # host/path → route config resolution
+│   ├── check_rate_limit.py      # Lua script invocation + fail-open handling
+│   ├── rate_limit_middleware.py # request pipeline
+│   ├── forward_request.py       # upstream proxying
+│   ├── logging_config.py
+│   └── script.lua               # sliding-window rate limit script
+└── tests/
+    ├── test_resolve_route.py
+    ├── test_check_rate_limit.py
+    ├── test_middleware.py
+    └── test_forward_request.py
+```
+
+## Getting started
+
+### 1. Install dependencies (Poetry)
+
 ```bash
-pip install -r requirements.txt
+poetry install --with dev
 ```
 
-### 2️⃣ Start Redis
+### 2. Start Redis
+
 ```bash
 docker run --name my-redis -p 6379:6379 -d redis
 ```
 
-### 3️⃣ Start Rate Limiter Proxy
+If a container with that name already exists:
+
 ```bash
-uvicorn app:app --port=8000 --reload
+docker start my-redis
 ```
 
-## 🔐 Redis Key Strategy
+### 3. Configure environment (optional)
+
+Defaults work out of the box; override via env vars or a `.env` file:
+
 ```
-rate_limit:{path}:{hostname}
+REDIS_URL=redis://localhost
+HTTP_TIMEOUT=10.0
+DEFAULT_UPSTREAM=http://www.google.com
+DEFAULT_LIMIT=2
+DEFAULT_WINDOW=60
+LOG_LEVEL=INFO
 ```
 
-## 🧠 Why Redis + Lua?
-- Guarantees atomicity
-- Eliminates race conditions
-- Extremely fast
-- Production-proven approach
+### 4. Run the proxy
 
-## Developer Contact
-```
-Saurav Muke : saurav54muke@gmail.com
+```bash
+poetry run uvicorn app:app --app-dir src --reload
 ```
 
+The API docs are available at `http://127.0.0.1:8000/api/v1/docs`.
+
+## Routing configuration
+
+Routes are defined per-host in `src/config.py`, matched by longest path prefix (respecting path-segment boundaries — `/api` matches `/api` and `/api/foo`, but not `/apikeys`):
+
+```python
+ROUTE_CONFIG = {
+    "api.myapp.com": {
+        "/login": {"upstream": "http://auth-service:9000", "limit": 5, "window": 60},
+        "/search": {"upstream": "http://search-service:9001", "limit": 100, "window": 60},
+    },
+}
+```
+
+Unmatched hosts/paths fall back to `DEFAULT_CONFIG`.
+
+## Redis key strategy
+
+```
+rate_limit:{hostname}:{path}:{client_ip}
+```
+
+Each key backs a Redis sorted set used by the sliding-window script — members are timestamped requests, evicted once they fall outside the configured window.
+
+## Why Redis + Lua?
+
+- A single Lua script executes atomically in Redis — no race conditions between reading and updating the count, even under concurrent requests.
+- The sliding-window approach (vs. fixed-window) avoids allowing a burst of `2x limit` requests around a window boundary.
+- Fast enough to sit in the hot path of every request without material latency.
+
+## Running tests
+
+```bash
+poetry run pytest -v
+```
+
+## Linting & formatting
+
+```bash
+poetry run ruff format --check src
+poetry run ruff check src
+```
+
+(`tests/` is intentionally excluded from ruff via `extend-exclude` in `pyproject.toml`.)
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push/PR to `main`:
+- `ruff format --check`
+- `ruff check`
+- `pytest`
+
+## Known limitations
+
+- No authentication layer — anything reaching the proxy is forwarded per the configured routes. Not yet safe to expose to untrusted/public traffic without adding an auth check.
+- Rate limiting by client IP is spoofable behind shared NAT or if `X-Forwarded-For` isn't validated against a trusted proxy.
+- Redis is currently a single instance with no HA/clustering configured.
+
+## Contact
+
+Saurav Muke — saurav54muke@gmail.com
