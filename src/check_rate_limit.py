@@ -1,11 +1,14 @@
 # check_rate_limit.py
 import time
+import os
 import state
 from logging_config import get_logger
 
 logger = get_logger(__name__)
 
-with open("script.lua", "r") as file:
+_SCRIPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "script.lua")
+
+with open(_SCRIPT_PATH, "r") as file:
     SCRIPT = file.read()
 
 _rate_limit_script = None
@@ -24,14 +27,13 @@ async def check_rate_limit(key: str, limit: int, window: int):
     try:
         script = _get_script()
         now_ms = int(time.time() * 1000)
-        current, ttl_ms = await script(
-            keys=[key],
-            args=[window, limit, now_ms]
-        )
+        current, ttl_ms = await script(keys=[key], args=[window, limit, now_ms])
         current = int(current)
         ttl_ms = int(ttl_ms)
     except Exception as exc:
-        logger.error("Rate limiter failed, failing open for key=%s: %s", key, exc, exc_info=True)
+        logger.error(
+            "Rate limiter failed, failing open for key=%s: %s", key, exc, exc_info=True
+        )
         return True, limit, window
 
     allowed = current <= limit

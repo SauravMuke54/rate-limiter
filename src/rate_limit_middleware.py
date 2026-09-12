@@ -10,7 +10,6 @@ logger = get_logger(__name__)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-
     EXEMPT_PATHS = {"/api/v1/docs", "/api/v1/redoc", "/api/v1/openapi.json", "/health"}
 
     async def dispatch(self, request: Request, call_next):
@@ -26,7 +25,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         try:
             route_cfg = resolve_route(hostname, path)
         except Exception as exc:
-            logger.error("Failed to resolve route for %s%s: %s", hostname, path, exc, exc_info=True)
+            logger.error(
+                "Failed to resolve route for %s%s: %s",
+                hostname,
+                path,
+                exc,
+                exc_info=True,
+            )
             return JSONResponse(
                 status_code=502,
                 content={"error": "Unable to resolve upstream route"},
@@ -48,25 +53,22 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         key = f"rate_limit:{hostname}:{path}:{client_ip}"
 
         allowed, remaining, ttl = await check_rate_limit(
-            key=key,
-            limit=limit,
-            window=window
+            key=key, limit=limit, window=window
         )
 
         if not allowed:
             logger.warning(
                 "Rate limit exceeded: host=%s path=%s ip=%s limit=%s window=%s",
-                hostname, path, client_ip, limit, window
+                hostname,
+                path,
+                client_ip,
+                limit,
+                window,
             )
             return JSONResponse(
                 status_code=429,
-                content={
-                    "error": "Rate limit exceeded",
-                    "retry_after": ttl
-                },
-                headers={
-                    "Retry-After": str(ttl)
-                }
+                content={"error": "Rate limit exceeded", "retry_after": ttl},
+                headers={"Retry-After": str(ttl)},
             )
 
         response = await call_next(request)

@@ -6,7 +6,12 @@ import state
 
 logger = get_logger(__name__)
 
-EXCLUDED_RESPONSE_HEADERS = {"content-encoding", "content-length", "transfer-encoding", "connection"}
+EXCLUDED_RESPONSE_HEADERS = {
+    "content-encoding",
+    "content-length",
+    "transfer-encoding",
+    "connection",
+}
 
 
 async def forward_request(upstream: str, request: Request) -> Response:
@@ -29,11 +34,20 @@ async def forward_request(upstream: str, request: Request) -> Response:
         logger.error("Upstream connection failed: %s %s", request.method, url)
         return Response(content=b"Could not connect to upstream", status_code=502)
     except httpx.HTTPError as exc:
-        logger.error("Upstream request failed: %s %s - %s", request.method, url, exc, exc_info=True)
-        return Response(content=f"Upstream request failed: {exc}".encode(), status_code=502)
+        logger.error(
+            "Upstream request failed: %s %s - %s",
+            request.method,
+            url,
+            exc,
+            exc_info=True,
+        )
+        return Response(
+            content=f"Upstream request failed: {exc}".encode(), status_code=502
+        )
 
     response_headers = {
-        k: v for k, v in response.headers.items()
+        k: v
+        for k, v in response.headers.items()
         if k.lower() not in EXCLUDED_RESPONSE_HEADERS
     }
 

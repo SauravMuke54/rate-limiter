@@ -3,6 +3,7 @@
 Centralized logging configuration for the gateway.
 Call setup_logging() once at startup (in main.py's lifespan or module level).
 """
+
 import logging
 import sys
 
