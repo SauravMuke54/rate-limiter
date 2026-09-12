@@ -2,13 +2,14 @@
 from contextlib import asynccontextmanager
 
 import httpx
+from fastapi import FastAPI, Request, status
+from redis import asyncio as aioredis
+
 import state
 from config import DEFAULT_CONFIG
-from fastapi import FastAPI, Request, status
 from forward_request import forward_request
 from logging_config import get_logger, setup_logging
 from rate_limit_middleware import RateLimitMiddleware
-from redis import asyncio as aioredis
 from settings import settings
 
 setup_logging(settings.log_level)

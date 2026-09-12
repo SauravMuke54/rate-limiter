@@ -17,9 +17,7 @@ def make_mock_redis_client(script_return_value=None, script_side_effect=None):
     register_script() is SYNCHRONOUS in redis.asyncio and returns a
     callable Script object; only calling that Script object is async.
     """
-    mock_script = AsyncMock(
-        return_value=script_return_value, side_effect=script_side_effect
-    )
+    mock_script = AsyncMock(return_value=script_return_value, side_effect=script_side_effect)
     mock_client = MagicMock()  # not AsyncMock — register_script itself is sync
     mock_client.register_script = MagicMock(return_value=mock_script)
     return mock_client, mock_script

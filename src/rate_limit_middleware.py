@@ -1,16 +1,23 @@
-# rate_limit_middleware.py
-from check_rate_limit import check_rate_limit
+from typing import ClassVar
+
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from check_rate_limit import check_rate_limit
 from logging_config import get_logger
 from resolve_route import resolve_route
-from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = get_logger(__name__)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    EXEMPT_PATHS = {"/api/v1/docs", "/api/v1/redoc", "/api/v1/openapi.json", "/health"}
+    EXEMPT_PATHS: ClassVar[set[str]] = {
+        "/api/v1/docs",
+        "/api/v1/redoc",
+        "/api/v1/openapi.json",
+        "/health",
+    }
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -24,19 +31,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         try:
             route_cfg = resolve_route(hostname, path)
-        except Exception as exc:
-            logger.error(
-                "Failed to resolve route for %s%s: %s",
-                hostname,
-                path,
-                exc,
-                exc_info=True,
-            )
+        except Exception:
+            logger.exception("Failed to resolve route for %s%s", hostname, path)
             return JSONResponse(
                 status_code=502,
                 content={"error": "Unable to resolve upstream route"},
             )
-
         if not route_cfg:
             logger.warning("No route config found for %s%s", hostname, path)
             return JSONResponse(
@@ -52,9 +52,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         key = f"rate_limit:{hostname}:{path}:{client_ip}"
 
-        allowed, remaining, ttl = await check_rate_limit(
-            key=key, limit=limit, window=window
-        )
+        allowed, remaining, ttl = await check_rate_limit(key=key, limit=limit, window=window)
 
         if not allowed:
             logger.warning(

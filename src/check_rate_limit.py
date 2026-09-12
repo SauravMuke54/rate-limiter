@@ -1,6 +1,7 @@
 # check_rate_limit.py
-import time
 import os
+import time
+
 import state
 from logging_config import get_logger
 
@@ -18,7 +19,7 @@ def _get_script():
     global _rate_limit_script
     if _rate_limit_script is None:
         if state.redis_client is None:
-            raise RuntimeError("redis_client is not initialized yet")
+            raise RuntimeError("redis_client is not initialized yet")  # noqa: TRY003
         _rate_limit_script = state.redis_client.register_script(SCRIPT)
     return _rate_limit_script
 
@@ -30,10 +31,8 @@ async def check_rate_limit(key: str, limit: int, window: int):
         current, ttl_ms = await script(keys=[key], args=[window, limit, now_ms])
         current = int(current)
         ttl_ms = int(ttl_ms)
-    except Exception as exc:
-        logger.error(
-            "Rate limiter failed, failing open for key=%s: %s", key, exc, exc_info=True
-        )
+    except Exception:
+        logger.exception("Rate limiter failed, failing open for key=%s", key)
         return True, limit, window
 
     allowed = current <= limit

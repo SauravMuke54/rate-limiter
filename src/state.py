@@ -1,7 +1,7 @@
 # state.py
-from typing import Optional
+
 import httpx
 from redis import asyncio as aioredis
 
-redis_client: Optional[aioredis.Redis] = None
-http_client: Optional[httpx.AsyncClient] = None
+redis_client: aioredis.Redis | None = None
+http_client: httpx.AsyncClient | None = None

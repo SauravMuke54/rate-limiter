@@ -14,9 +14,7 @@ ROUTE_CONFIG = {
             "window": 60,
         },
     },
-    "admin.myapp.com": {
-        "/": {"upstream": "http://admin-service:9002", "limit": 20, "window": 60}
-    },
+    "admin.myapp.com": {"/": {"upstream": "http://admin-service:9002", "limit": 20, "window": 60}},
 }
 
 DEFAULT_CONFIG = {

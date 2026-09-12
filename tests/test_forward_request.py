@@ -70,9 +70,7 @@ async def test_host_header_removed_before_forwarding():
 @pytest.mark.asyncio
 async def test_returns_504_on_timeout():
     state.http_client = AsyncMock()
-    state.http_client.request = AsyncMock(
-        side_effect=httpx.TimeoutException("timed out")
-    )
+    state.http_client.request = AsyncMock(side_effect=httpx.TimeoutException("timed out"))
 
     request = make_mock_request()
     response = await forward_request("http://upstream", request)
