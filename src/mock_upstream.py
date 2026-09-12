@@ -3,6 +3,7 @@ A tiny, dependency-free mock upstream server for load testing.
 Responds instantly to any path/method with a 200 JSON body.
 Run alongside the rate limiter proxy during load tests.
 """
+
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import sys
