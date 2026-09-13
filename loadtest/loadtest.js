@@ -85,7 +85,7 @@ export function rampScenario() {
   const res = http.get(`${BASE_URL}${TARGET_PATH}`, {
     headers: {
       Host: TARGET_HOST,
-      'X-API-Key': 'sk_live_abc123',
+        'X-API-Key': 'test-key-do-not-use-in-prod',
     },
   });
 
