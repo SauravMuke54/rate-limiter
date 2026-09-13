@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rate Limiter Load Test Report</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; color: #1a1a1a; background: #fafafa; }
+  h1 { margin-bottom: 0.2rem; }
+  .subtitle { color: #666; margin-top: 0; margin-bottom: 2rem; }
+  .verdict { display: inline-block; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; margin-bottom: 1.5rem; }
+  .verdict.pass { background: #d1f5d3; color: #1a7431; }
+  .verdict.fail { background: #fbdada; color: #9b1c1c; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .card { background: white; border: 1px solid #e5e5e5; border-radius: 8px; padding: 1rem; }
+  .card .label { font-size: 0.8rem; color: #666; text-transform: uppercase; letter-spacing: 0.03em; }
+  .card .value { font-size: 1.6rem; font-weight: 700; margin-top: 0.2rem; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; background: white; }
+  th, td { text-align: left; padding: 0.6rem 0.8rem; border-bottom: 1px solid #eee; }
+  th { background: #f0f0f0; font-size: 0.85rem; text-transform: uppercase; }
+  .pass { color: #1a7431; font-weight: 600; }
+  .fail { color: #9b1c1c; font-weight: 600; }
+  code { background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
+</style>
+</head>
+<body>
+  <h1>Rate Limiter — Load Test Report</h1>
+  <p class="subtitle">Generated 2026-09-13T06:31:34.308Z</p>
+
+  <div class="verdict pass">
+    Overall: ALL THRESHOLDS PASSED
+  </div>
+
+  <div class="grid">
+    <div class="card"><div class="label">Total Requests</div><div class="value">70152</div></div>
+    <div class="card"><div class="label">Requests/sec</div><div class="value">539.03</div></div>
+    <div class="card"><div class="label">200 Allowed</div><div class="value">207</div></div>
+    <div class="card"><div class="label">429 Rejected</div><div class="value">69945</div></div>
+    <div class="card"><div class="label">5xx Errors</div><div class="value">0</div></div>
+    <div class="card"><div class="label">Unexpected Status</div><div class="value">0</div></div>
+    <div class="card"><div class="label">p50 Latency</div><div class="value">2.5 ms</div></div>
+    <div class="card"><div class="label">p95 Latency</div><div class="value">12.9 ms</div></div>
+    <div class="card"><div class="label">p99 Latency</div><div class="value">51.9 ms</div></div>
+    <div class="card"><div class="label">Max Latency</div><div class="value">219.1 ms</div></div>
+    <div class="card"><div class="label">Check Pass Rate</div><div class="value">100.00%</div></div>
+  </div>
+
+  <h2>Thresholds</h2>
+  <table>
+    <thead><tr><th>Metric</th><th>Condition</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>checks</td>
+        <td><code>rate>0.99</code></td>
+        <td class="pass">PASS</td>
+      </tr>
+      <tr>
+        <td>http_req_duration</td>
+        <td><code>p(95)<1000</code></td>
+        <td class="pass">PASS</td>
+      </tr>
+      <tr>
+        <td>http_req_duration</td>
+        <td><code>p(99)<3000</code></td>
+        <td class="pass">PASS</td>
+      </tr>
+      <tr>
+        <td>rl_server_error_5xx</td>
+        <td><code>count==0</code></td>
+        <td class="pass">PASS</td>
+      </tr></tbody>
+  </table>
+
+  <h2>What to look for</h2>
+  <ul>
+    <li><strong>5xx Errors should be 0</strong> — anything above zero means an unhandled exception surfaced under load rather than a clean error response.</li>
+    <li><strong>p95/p99 latency</strong> should stay well below your SLA even as VUs ramp up in the <code>ramp_up</code> scenario — a sudden knee indicates the proxy's saturation point.</li>
+    <li><strong>200 + 429 should account for ~all requests</strong> — a large "Unexpected Status" count suggests something is returning codes outside the expected 200/429/502/504 range.</li>
+    <li>Check <code>report.json</code> for the full raw metrics if you need to dig into a specific scenario or percentile not shown here.</li>
+  </ul>
+</body>
+</html>
