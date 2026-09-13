@@ -24,23 +24,23 @@
 </head>
 <body>
   <h1>Rate Limiter — Load Test Report</h1>
-  <p class="subtitle">Generated 2026-09-13T06:31:34.308Z</p>
+  <p class="subtitle">Generated 2026-09-13T07:11:59.236Z</p>
 
   <div class="verdict pass">
     Overall: ALL THRESHOLDS PASSED
   </div>
 
   <div class="grid">
-    <div class="card"><div class="label">Total Requests</div><div class="value">70152</div></div>
-    <div class="card"><div class="label">Requests/sec</div><div class="value">539.03</div></div>
-    <div class="card"><div class="label">200 Allowed</div><div class="value">207</div></div>
-    <div class="card"><div class="label">429 Rejected</div><div class="value">69945</div></div>
+    <div class="card"><div class="label">Total Requests</div><div class="value">71229</div></div>
+    <div class="card"><div class="label">Requests/sec</div><div class="value">547.09</div></div>
+    <div class="card"><div class="label">200 Allowed</div><div class="value">224</div></div>
+    <div class="card"><div class="label">429 Rejected</div><div class="value">71005</div></div>
     <div class="card"><div class="label">5xx Errors</div><div class="value">0</div></div>
     <div class="card"><div class="label">Unexpected Status</div><div class="value">0</div></div>
-    <div class="card"><div class="label">p50 Latency</div><div class="value">2.5 ms</div></div>
-    <div class="card"><div class="label">p95 Latency</div><div class="value">12.9 ms</div></div>
-    <div class="card"><div class="label">p99 Latency</div><div class="value">51.9 ms</div></div>
-    <div class="card"><div class="label">Max Latency</div><div class="value">219.1 ms</div></div>
+    <div class="card"><div class="label">p50 Latency</div><div class="value">2.0 ms</div></div>
+    <div class="card"><div class="label">p95 Latency</div><div class="value">9.3 ms</div></div>
+    <div class="card"><div class="label">p99 Latency</div><div class="value">22.9 ms</div></div>
+    <div class="card"><div class="label">Max Latency</div><div class="value">175.6 ms</div></div>
     <div class="card"><div class="label">Check Pass Rate</div><div class="value">100.00%</div></div>
   </div>
 
@@ -48,6 +48,11 @@
   <table>
     <thead><tr><th>Metric</th><th>Condition</th><th>Result</th></tr></thead>
     <tbody>
+      <tr>
+        <td>rl_server_error_5xx</td>
+        <td><code>count==0</code></td>
+        <td class="pass">PASS</td>
+      </tr>
       <tr>
         <td>checks</td>
         <td><code>rate>0.99</code></td>
@@ -61,11 +66,6 @@
       <tr>
         <td>http_req_duration</td>
         <td><code>p(99)<3000</code></td>
-        <td class="pass">PASS</td>
-      </tr>
-      <tr>
-        <td>rl_server_error_5xx</td>
-        <td><code>count==0</code></td>
         <td class="pass">PASS</td>
       </tr></tbody>
   </table>

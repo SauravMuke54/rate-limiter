@@ -150,11 +150,15 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push/PR to `main`:
 - `ruff check`
 - `pytest`
 
+## Authentication
+
+All non-exempt routes require an `X-API-Key` header. Keys are managed in `src/api_keys.py`.
+
 ## Performance & Load Testing
 
 The proxy was load-tested using k6 with a ramp-up scenario reaching 200 virtual users and a concurrent burst scenario.
 
-**[View detailed k6 HTML report](./load-tests/report.html)**
+**[View detailed k6 HTML report](./loadtests/report.html)**
 
 ### Results
 
@@ -176,9 +180,10 @@ All configured k6 thresholds passed.
 
 ## Known limitations
 
-- No authentication layer — anything reaching the proxy is forwarded per the configured routes. Not yet safe to expose to untrusted/public traffic without adding an auth check.
-- Rate limiting by client IP is spoofable behind shared NAT or if `X-Forwarded-For` isn't validated against a trusted proxy.
-- Redis is currently a single instance with no HA/clustering configured.
+- **Authentication**: all non-exempt routes require a valid `X-API-Key` header, checked against `src/api_keys.py`. This closes the IP-spoofing gap (rate limits are keyed by authenticated `client_id`, not client IP), but key management is currently a hardcoded dict — no expiry, rotation, revocation, or per-key scoping (any valid key can call any route). Not yet backed by a secrets manager or database.
+- **Public/unauthenticated traffic**: the design assumes every route requires a key. If a genuinely public endpoint is ever added, it will need its own identity/rate-limiting strategy, since there's currently no fallback for unauthenticated callers.
+- **Transport security**: API keys are sent as plain headers — this depends on TLS being terminated in front of the proxy (e.g. by a load balancer). The proxy itself doesn't enforce or verify HTTPS.
+- **Redis**: single instance, no HA/clustering configured. A Redis outage is handled gracefully (rate limiter fails open rather than 500ing), but there's no automatic failover.
 
 ## Contact
 

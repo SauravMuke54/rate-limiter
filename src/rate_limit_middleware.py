@@ -1,12 +1,13 @@
+# rate_limit_middleware.py
 from typing import ClassVar
 
+from api_keys import resolve_client_id
+from check_rate_limit import check_rate_limit
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
-
-from check_rate_limit import check_rate_limit
 from logging_config import get_logger
 from resolve_route import resolve_route
+from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = get_logger(__name__)
 
@@ -25,9 +26,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if path in self.EXEMPT_PATHS:
             return await call_next(request)
 
+        # --- NEW: authenticate the request ---
+        api_key = request.headers.get("x-api-key")
+        client_id = resolve_client_id(api_key)
+        if client_id is None:
+            logger.warning("Rejected request with missing/invalid API key for %s", path)
+            return JSONResponse(
+                status_code=401,
+                content={"error": "Missing or invalid API key"},
+            )
+        # --------------------------------------
+
         hostname = request.headers.get("host", "").split(":")[0] or request.client.host
-        client_ip = request.client.host
-        logger.debug("Incoming request from %s to %s%s", client_ip, hostname, path)
+        logger.debug("Incoming request from client=%s to %s%s", client_id, hostname, path)
 
         try:
             route_cfg = resolve_route(hostname, path)
@@ -37,6 +48,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 status_code=502,
                 content={"error": "Unable to resolve upstream route"},
             )
+
         if not route_cfg:
             logger.warning("No route config found for %s%s", hostname, path)
             return JSONResponse(
@@ -50,16 +62,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         request.state.upstream = upstream
 
-        key = f"rate_limit:{hostname}:{path}:{client_ip}"
+        # --- CHANGED: key by client_id instead of client IP ---
+        key = f"rate_limit:{hostname}:{path}:{client_id}"
+        # --------------------------------------------------------
 
         allowed, remaining, ttl = await check_rate_limit(key=key, limit=limit, window=window)
 
         if not allowed:
             logger.warning(
-                "Rate limit exceeded: host=%s path=%s ip=%s limit=%s window=%s",
+                "Rate limit exceeded: host=%s path=%s client=%s limit=%s window=%s",
                 hostname,
                 path,
-                client_ip,
+                client_id,
                 limit,
                 window,
             )

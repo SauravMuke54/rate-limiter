@@ -5,6 +5,7 @@ boundary logic. Uses a fixed test-only route config (via monkeypatch)
 so these tests never break when config.py's real upstreams change
 (e.g. swapping in local mock upstreams for load testing).
 """
+
 import pytest
 import resolve_route as resolve_route_module
 from resolve_route import resolve_route

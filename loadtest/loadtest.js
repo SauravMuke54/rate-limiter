@@ -83,7 +83,10 @@ function classify(res) {
 
 export function rampScenario() {
   const res = http.get(`${BASE_URL}${TARGET_PATH}`, {
-    headers: { Host: TARGET_HOST },
+    headers: {
+      Host: TARGET_HOST,
+      'X-API-Key': 'sk_live_abc123',
+    },
   });
 
   classify(res);
@@ -99,10 +102,11 @@ export function rampScenario() {
 }
 
 export function burstScenario() {
-  // No sleep here on purpose: all VUs fire back-to-back to maximize
-  // concurrent pressure on the same rate-limit bucket.
   const res = http.get(`${BASE_URL}${TARGET_PATH}`, {
-    headers: { Host: TARGET_HOST },
+    headers: {
+      Host: TARGET_HOST,
+      'X-API-Key': 'sk_live_abc123',
+    },
   });
 
   classify(res);
