@@ -150,6 +150,30 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push/PR to `main`:
 - `ruff check`
 - `pytest`
 
+## Performance & Load Testing
+
+The proxy was load-tested using k6 with a ramp-up scenario reaching 200 virtual users and a concurrent burst scenario.
+
+**[View detailed k6 HTML report](./load-tests/report.html)**
+
+### Results
+
+| Metric          |        Result |
+| --------------- | ------------: |
+| Total requests  |    **70,152** |
+| Throughput      | **539 req/s** |
+| 200 Allowed     |       **207** |
+| 429 Rejected    |    **69,945** |
+| 5xx Errors      |         **0** |
+| p50 Latency     |    **2.5 ms** |
+| p95 Latency     |   **12.9 ms** |
+| p99 Latency     |   **51.9 ms** |
+| Max Latency     |  **219.1 ms** |
+| Check Pass Rate |      **100%** |
+
+All configured k6 thresholds passed.
+
+
 ## Known limitations
 
 - No authentication layer — anything reaching the proxy is forwarded per the configured routes. Not yet safe to expose to untrusted/public traffic without adding an auth check.
