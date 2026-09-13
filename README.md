@@ -156,7 +156,7 @@ All non-exempt routes require an `X-API-Key` header. Keys are managed in `src/ap
 
 ## Performance & Load Testing
 
-The proxy was load-tested using k6 with a ramp-up scenario reaching 200 virtual users and a concurrent burst scenario.
+The proxy was load-tested using k6 with a ramp-up scenario reaching 200 virtual users and a concurrent burst scenario, with all requests authenticated via a valid API key.
 
 **[View detailed k6 HTML report](./loadtests/report.html)**
 
@@ -164,19 +164,19 @@ The proxy was load-tested using k6 with a ramp-up scenario reaching 200 virtual 
 
 | Metric          |        Result |
 | --------------- | ------------: |
-| Total requests  |    **70,152** |
-| Throughput      | **539 req/s** |
-| 200 Allowed     |       **207** |
-| 429 Rejected    |    **69,945** |
+| Total requests  |    **71,229** |
+| Throughput      | **547 req/s** |
+| 200 Allowed     |       **224** |
+| 429 Rejected    |    **71,005** |
 | 5xx Errors      |         **0** |
-| p50 Latency     |    **2.5 ms** |
-| p95 Latency     |   **12.9 ms** |
-| p99 Latency     |   **51.9 ms** |
-| Max Latency     |  **219.1 ms** |
+| Unexpected Status |       **0** |
+| p50 Latency     |    **2.0 ms** |
+| p95 Latency     |    **9.3 ms** |
+| p99 Latency     |   **22.9 ms** |
+| Max Latency     |  **175.6 ms** |
 | Check Pass Rate |      **100%** |
 
-All configured k6 thresholds passed.
-
+All configured k6 thresholds passed — zero unhandled server errors, sub-second latency at all percentiles, and correct enforcement of both authentication and rate limits under sustained concurrent load.
 
 ## Known limitations
 
