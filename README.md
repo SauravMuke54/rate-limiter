@@ -154,7 +154,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push/PR to `main`:
 
 The proxy was load-tested using k6 with a ramp-up scenario reaching 200 virtual users and a concurrent burst scenario.
 
-**[View detailed k6 HTML report](./load-tests/report.html)**
+**[View detailed k6 HTML report](./loadtest/report.html)**
 
 ### Results
 
