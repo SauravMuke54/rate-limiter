@@ -158,7 +158,7 @@ All non-exempt routes require an `X-API-Key` header. Keys are managed in `src/ap
 
 The proxy was load-tested using k6 with a ramp-up scenario reaching 200 virtual users and a concurrent burst scenario, with all requests authenticated via a valid API key.
 
-**[View detailed k6 HTML report](./loadtests/report.html)**
+**[View detailed k6 HTML report](./loadtest/report.html)**
 
 ### Results
 
